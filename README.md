@@ -24,4 +24,10 @@ you like generative art? me too. here's some cool shit
 ## day 4
 
 - [source](https://github.com/ELI7VH/nextgenart/tree/genuary-4-2025)
-- live
+- [demo](https://genuary-4-2025-a7gbi.ondigitalocean.app)
+
+# todo
+
+- [ ] automated deployments based on branch name
+  - https://docs.digitalocean.com/products/app-platform/how-to/create-apps/#create-resource-from-source-code-using-automation
+  - https://docs.digitalocean.com/products/app-platform/how-to/manage-domains/#add-a-domain-to-an-app-using-automation
