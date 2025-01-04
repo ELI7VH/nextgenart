@@ -24,7 +24,7 @@ you like generative art? me too. here's some cool shit
 ## day 4
 
 - [source](https://github.com/ELI7VH/nextgenart/tree/genuary-4-2025)
-- [demo](https://genuary-4-2025-a7gbi.ondigitalocean.app)
+- [demo](https://genuary.4.2025.elijahlucian.ca/)
 
 # todo
 
