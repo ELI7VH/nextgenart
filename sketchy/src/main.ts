@@ -45,8 +45,7 @@ const main = async () => {
 
   const sketch = createSketch(({ context, circle }) => {
     return ({ t, width, height }) => {
-      const time = t()
-
+      // Genuary 3, 2025 - "Black On Black"
       context.fillStyle = '#000000'
       context.fillRect(0, 0, width, height)
 
