@@ -31,3 +31,4 @@ you like generative art? me too. here's some cool shit
 - [ ] automated deployments based on branch name
   - https://docs.digitalocean.com/products/app-platform/how-to/create-apps/#create-resource-from-source-code-using-automation
   - https://docs.digitalocean.com/products/app-platform/how-to/manage-domains/#add-a-domain-to-an-app-using-automation
+- add config / dockerfile file pointing to latest iteration of this project.
