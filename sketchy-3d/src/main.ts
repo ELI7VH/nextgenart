@@ -26,8 +26,30 @@ const params = createParams({
 })
 
 const sketch = create3dSketch(
-  ({ scene, camera, renderer, PI, TAU, container, sin, cos }) => {
+  ({ scene, camera, renderer, PI, TAU, container, sin, cos, context }) => {
     // Z is UP
+
+    container.addEventListener('contextmenu', (e) => {
+      if (!e.ctrlKey) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    })
+
+    // window.addEventListener('keypress', (e) => {
+    //   if (e.key === 's') {
+    //     // take screenshot
+
+    //     renderer.domElement.toBlob((blob) => {
+    //       const a = document.createElement('a')
+    //       a.href = URL.createObjectURL(blob)
+    //       a.download = 'screenshot.png'
+    //       a.click()
+    //     })
+
+    //     e.preventDefault()
+    //   }
+    // })
 
     const ambient = useAmbient(0xffffff, 0.5)
     scene.add(ambient)
@@ -37,7 +59,7 @@ const sketch = create3dSketch(
 
     const data = {
       clicked: false,
-      rotation: { x: PI * 1.25, y: 0, z: 0 },
+      rotation: { x: PI * 0.75, y: 0, z: 0 },
       scroll: {
         x: 0,
         y: 0,
@@ -65,10 +87,12 @@ const sketch = create3dSketch(
     }
     mouse.onClick = (e) => {
       e.stopPropagation()
+      // remove context menu
+      e.preventDefault()
 
       data.clicked = !data.clicked
       // box.rotation.x += PI * 0.25
-      data.rotation.x += PI * 0.25
+      data.rotation.x += PI * (e.button === 0 ? 0.25 : -0.25)
     }
 
     const bounds: OrthographicCameraBounds = [-5, 5, 5, -5]
@@ -122,7 +146,7 @@ const sketch = create3dSketch(
       if (mouse.scrollInertia >= 0) {
         light.color.set(0xffffff)
         light.intensity = 2 + mouse.scrollInertia * 0.01
-        ambient.intensity = 0.2 + mouse.scrollInertia * 0.0001
+        ambient.intensity = 0 + mouse.scrollInertia * 0.0001
         // box.scale.set(
         //   1 + mouse.scrollInertia * 0.002,
         //   1, // + mouse.scrollInertia * 0.001,
