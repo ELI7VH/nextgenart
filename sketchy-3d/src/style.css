@@ -20,3 +20,11 @@ body {
 canvas {
   display: block;
 }
+
+#debug {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-color: #000;
+}
