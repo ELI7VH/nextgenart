@@ -1,0 +1,5 @@
+{
+  "watch": ["package.json"],
+  "exec": "npm install && npm run dev"
+}
+

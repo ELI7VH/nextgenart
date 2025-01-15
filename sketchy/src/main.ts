@@ -1,75 +1,110 @@
+import { mapXY } from '@dank-inc/lewps'
+import { Rando, Maff } from '@dank-inc/numbaz'
 import { createParams, createSketch, loadSketch } from '@dank-inc/sketchy'
+import { hsl } from '@dank-inc/sketchy/lib/helpers/color'
 import { SuperMouse } from '@dank-inc/super-mouse'
-import { Banger, getWav } from '@dank-inc/banger'
 
 const main = async () => {
-  const wav = await getWav('https://cdn.elijahlucian.ca/drawing.wav')
-  let banger: Banger | null = null
-  if (wav) {
-    banger = new Banger({
-      arrayBuffer: wav,
-      name: 'banger',
-      volume: 1,
-      drift: 1000,
-      onFail: () => console.error('Failed to load wav'),
-      onLoaded: () => {
-        console.log('wav loaded')
-      },
-    })
-  }
-
   const element = document.getElementById('root')!
   element.innerHTML = ''
 
-  type Item = {
-    x: number
-    y: number
-    radius: number
-    life: number
-  }
-
-  const items: Item[] = []
-
   const mouse = new SuperMouse({ element, scrollScale: 0.1 })
 
-  mouse.onClick = () => {
-    banger?.play()
-    items.push({
-      life: 100,
-      x: mouse.x,
-      y: mouse.y,
-      radius: 10 + Math.abs(mouse.scrollY),
-    })
+  const data = {
+    scrollU: 0,
+    scrollDir: 1,
   }
+
+  const newPoint = (u: number, v: number) => ({
+    u,
+    uu: Maff.lerp(u, 1, 0.25),
+    v,
+    vv: Maff.lerp(v, 1, 0.1),
+    h: 1,
+    w: 0.7,
+    life: Rando.normal(),
+    color: {
+      h: Rando.normal(0.04, 0.9),
+      s: Rando.normal(0.05, 0.5),
+      l: Rando.normal(0.2, 0.4),
+    },
+  })
+
+  const points = mapXY(50, 50, newPoint)
+
+  let shuffled = points.sort(() => Math.random() - 0.5)
+
+  mouse.onClick = () => {
+    // shuffled = shuffled.map((item, i) => newPoint(item.u, item.v))
+  }
+
   mouse.onElement = true
 
-  const sketch = createSketch(({ context, circle }) => {
-    return ({ t, width, height }) => {
-      // Genuary 3, 2025 - "Black On Black"
-      context.fillStyle = '#000000'
-      context.fillRect(0, 0, width, height)
+  const quantize = (n: number, q: number) => {
+    return Math.round(n / q) * q
+  }
 
-      items.forEach((item) => {
-        context.fillStyle = `rgba(255, 255, 255, ${item.life / 100})`
-        context.strokeStyle = '#aaa'
-        circle(item.x, item.y, item.radius, { stroke: true })
-        item.life -= 1
-      })
+  const sketch = createSketch(
+    ({ context, circle, saver, TAU, time, shape }) => {
+      mouse.onScroll = (e) => {
+        const dir = e.deltaY > 0 ? 1 : -1
+        data.scrollU += dir * 0.02
+      }
 
-      const x = mouse.x
-      const y = mouse.y
-      const radius = Math.abs(mouse.scrollY) + 10
+      return ({ t, width, height }) => {
+        // Genuary 15, 2025 - "Design A Rug"
+        context.fillStyle = '#000000'
+        context.fillRect(0, 0, width, height)
 
-      context.fillStyle = '#fff'
-      if (mouse.onElement) circle(x, y, radius)
-    }
-  })
+        shuffled.forEach((item) => {
+          const x = item.uu * width
+          const y = item.vv * height
+
+          saver(() => {
+            context.translate(x, y)
+            const r = Math.sin(t(0) + item.u) * TAU
+            context.rotate(quantize(y + r, TAU / 4) + TAU / 8)
+
+            context.scale(item.w, item.w)
+            context.fillStyle = hsl(
+              item.color.h + data.scrollU,
+              item.color.s,
+              item.color.l,
+            )
+
+            const uuu = (33 * item.v + t(0.1) + item.u) % 0.2
+
+            const modu = Math.sin(uuu * TAU)
+
+            const s = quantize(0.5 * (Math.sin(modu * TAU) + 4) * 5 * 2, 3)
+
+            context.strokeStyle = '#000'
+            context.lineWidth = 5
+
+            shape(
+              [
+                [s, -s * 2],
+                [s, 0],
+                [0, s * 2],
+                [0, 0],
+              ],
+              {
+                closed: true,
+                fill: true,
+                // stroke: true,
+              },
+            )
+          })
+        })
+      }
+    },
+  )
 
   const lifecycle = loadSketch(
     sketch,
     createParams({
       element,
-      animate: true,
+      // animate: true,
       dimensions: [element.clientWidth, element.clientHeight],
     }),
   )
