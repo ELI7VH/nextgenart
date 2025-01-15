@@ -1,6 +1,8 @@
 FROM node:22-alpine
 
-ENV TARGET_DIR=sketchy-3d
+ARG TARGET_DIR=sketchy
+
+ENV TARGET_DIR=${TARGET_DIR}
 
 WORKDIR /app
 
