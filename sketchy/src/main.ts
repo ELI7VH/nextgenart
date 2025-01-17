@@ -26,6 +26,7 @@ const main = async () => {
     v,
     vv: Maff.lerp(v, 1, 0.1),
     h: 1,
+    r: Rando.normal(),
     w: 0.7,
     life: Rando.normal(),
     sound: 0,
@@ -79,8 +80,12 @@ const main = async () => {
 
           saver(() => {
             context.translate(x, y)
+
             const r = Math.sin(item.u) * TAU
-            context.rotate(quantize(y + r, TAU / 4) + TAU / 8)
+
+            context.rotate(
+              quantize(y + r + t(item.r * 0.01), TAU / 4) + TAU / 8,
+            )
 
             context.scale(item.w, item.w)
             context.fillStyle = hsl(
