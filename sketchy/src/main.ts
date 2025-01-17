@@ -18,6 +18,7 @@ const main = async () => {
   const data = {
     scrollU: 0,
     scrollDir: 1,
+    shuffled: false,
   }
 
   const newPoint = (u: number, v: number) => ({
@@ -46,6 +47,11 @@ const main = async () => {
   mouse.onClick = async () => {
     if (!mic) {
       mic = await micIn()
+    }
+    if (data.shuffled) {
+      shuffled = points
+    } else {
+      shuffled = points.sort(() => Math.random() - 0.5)
     }
   }
 
