@@ -39,7 +39,7 @@ const main = async () => {
 
   const points = mapXY(32, 32, newPoint)
 
-  let shuffled = points.sort(() => Math.random() - 0.5)
+  let shuffled = points
 
   let mic = await micIn()
 
