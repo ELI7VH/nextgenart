@@ -3,6 +3,7 @@ import { Rando, Maff } from '@dank-inc/numbaz'
 import { createParams, createSketch, loadSketch } from '@dank-inc/sketchy'
 import { hsl } from '@dank-inc/sketchy/lib/helpers/color'
 import { SuperMouse } from '@dank-inc/super-mouse'
+import { micIn } from './lib/micIn'
 
 const main = async () => {
   const element = document.getElementById('root')!
@@ -27,6 +28,7 @@ const main = async () => {
     h: 1,
     w: 0.7,
     life: Rando.normal(),
+    sound: 0,
     color: {
       h: Rando.normal(0.04, 0.9),
       s: Rando.normal(0.05, 0.5),
@@ -34,12 +36,18 @@ const main = async () => {
     },
   })
 
-  const points = mapXY(25, 25, newPoint)
+  const points = mapXY(32, 32, newPoint)
 
   let shuffled = points.sort(() => Math.random() - 0.5)
 
-  mouse.onClick = () => {
-    // shuffled = shuffled.map((item, i) => newPoint(item.u, item.v))
+  let mic: any
+
+  mouse.onClick = async () => {
+    if (!mic) {
+      mic = await micIn()
+    }
+    mic.updateByteTimeDomainData()
+    console.log(mic.tdData)
   }
 
   mouse.onElement = true
@@ -57,26 +65,35 @@ const main = async () => {
 
       return ({ t, width, height }) => {
         // Genuary 15, 2025 - "Design A Rug"
+
         context.fillStyle = '#000000'
         context.fillRect(0, 0, width, height)
 
-        shuffled.forEach((item) => {
+        mic?.updateByteTimeDomainData()
+
+        shuffled.forEach((item, i) => {
           const x = item.uu * width
           const y = item.vv * height
 
+          const micValue = (mic?.tdData[i] - 128) / 128 || 0
+
+          item.sound += Math.abs(micValue)
+
           saver(() => {
             context.translate(x, y)
-            const r = Math.sin(t(0) + item.u) * TAU
+            const r = Math.sin(item.u) * TAU
             context.rotate(quantize(y + r, TAU / 4) + TAU / 8)
 
             context.scale(item.w, item.w)
             context.fillStyle = hsl(
-              item.color.h + data.scrollU,
+              item.color.h + data.scrollU + item.sound,
               item.color.s,
               item.color.l,
             )
 
-            const uuu = (33 * item.v + t(0.1) + item.u) % 0.2
+            item.sound *= 0.99
+
+            const uuu = (33 * item.v + item.u) % 0.2
 
             const modu = Math.sin(uuu * TAU)
 
@@ -108,7 +125,7 @@ const main = async () => {
     sketch,
     createParams({
       element,
-      // animate: true,
+      animate: true,
       dimensions: [element.clientWidth, element.clientHeight],
     }),
   )
