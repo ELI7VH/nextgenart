@@ -8,7 +8,11 @@ const main = async () => {
   const element = document.getElementById('root')!
   element.innerHTML = ''
 
-  const mouse = new SuperMouse({ element, scrollScale: 0.1 })
+  const mouse = new SuperMouse({
+    element,
+    scrollScale: 0.1,
+    enableContext: true,
+  })
 
   const data = {
     scrollU: 0,
@@ -17,7 +21,7 @@ const main = async () => {
 
   const newPoint = (u: number, v: number) => ({
     u,
-    uu: Maff.lerp(u, 1, 0.25),
+    uu: Maff.lerp(u, 1, 0.1),
     v,
     vv: Maff.lerp(v, 1, 0.1),
     h: 1,
@@ -30,7 +34,7 @@ const main = async () => {
     },
   })
 
-  const points = mapXY(50, 50, newPoint)
+  const points = mapXY(25, 25, newPoint)
 
   let shuffled = points.sort(() => Math.random() - 0.5)
 
