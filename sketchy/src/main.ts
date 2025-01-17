@@ -40,14 +40,12 @@ const main = async () => {
 
   let shuffled = points.sort(() => Math.random() - 0.5)
 
-  let mic: any
+  let mic = await micIn()
 
   mouse.onClick = async () => {
     if (!mic) {
       mic = await micIn()
     }
-    mic.updateByteTimeDomainData()
-    console.log(mic.tdData)
   }
 
   mouse.onElement = true
