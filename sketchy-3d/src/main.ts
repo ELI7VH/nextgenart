@@ -9,6 +9,7 @@ import {
   start3dSketch,
   useOrthographicCamera,
   OrthographicCameraBounds,
+  useShader,
 } from '@dank-inc/sketchy-3d'
 
 import { mapXY } from '@dank-inc/lewps'
@@ -118,15 +119,46 @@ const sketch = create3dSketch(
     camera.lookAt(0, 0, 0)
     scene.add(camera)
 
+    const frag = /*glsl*/ `
+      varying vec2 vUv;  
+      uniform vec3 color;
+      uniform float time;
+
+      void main() {
+        gl_FragColor = vec4(vUv, time, 0.9);
+      }
+    `
+
+    const vert = /*glsl*/ `
+      varying vec2 vUv;
+      uniform float time;
+      uniform vec3 color;
+
+      void main() {
+        vUv = uv;
+        vec3 pos = position.xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+
+    `
+
     const cubes = mapXY(xLim, yLim, (u, v) => {
       const i = u + v
 
       const h = Math.floor((Rando.normal() * 0.02 + 0.55) * 10) / 10
 
-      const cube = useMesh(
-        useBox([1, 1, 1]),
-        useStandardMaterial(hsl(h, 1, 0.4)),
+      const shaderMat = useShader(
+        {
+          frag,
+          vert,
+        },
+        [
+          ['color', hsl(h, 1, 0.4)],
+          ['time', 0],
+        ],
       )
+
+      const cube = useMesh(useBox([1, 1, 1]), shaderMat)
 
       // this is wrong I think
       const x = Maff.map(u, bounds[0] + 1, bounds[1] - 1)
@@ -189,7 +221,7 @@ const sketch = create3dSketch(
             (Math.floor(ai / cubes.length) + data.jndex) % colors.length
           debug.update(palleteIndex)
 
-          cube.material.color.set(colors[palleteIndex])
+          // cube.material.color.set(colors[palleteIndex])
         }
       })
 
