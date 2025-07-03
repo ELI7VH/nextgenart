@@ -32,13 +32,13 @@ const main = async () => {
     life: Rando.normal(),
     sound: 0,
     color: {
-      h: Rando.normal(0.04, 0.9),
+      h: Rando.normal(0.08, 0.9),
       s: Rando.normal(0.05, 0.5),
       l: Rando.normal(0.2, 0.4),
     },
   })
 
-  const points = mapXY(32, 32, newPoint)
+  const points = mapXY(34, 30, newPoint)
 
   let shuffled = points
 
@@ -61,6 +61,8 @@ const main = async () => {
     return Math.round(n / q) * q
   }
 
+  const phrase = 'you are very distracting'
+
   const sketch = createSketch(
     ({ context, circle, saver, TAU, time, shape }) => {
       mouse.onScroll = (e) => {
@@ -69,8 +71,6 @@ const main = async () => {
       }
 
       return ({ t, width, height }) => {
-        // Genuary 15, 2025 - "Design A Rug"
-
         context.fillStyle = '#000000'
         context.fillRect(0, 0, width, height)
 
@@ -90,7 +90,7 @@ const main = async () => {
             const r = Math.sin(item.u) * TAU
 
             context.rotate(
-              quantize(y + r + t(item.r * 0.01), TAU / 4) + TAU / 8,
+              quantize(y + r + t(item.r * 0.01), TAU / 4) + TAU / 2,
             )
 
             context.scale(item.w, item.w)
@@ -111,19 +111,30 @@ const main = async () => {
             context.strokeStyle = '#000'
             context.lineWidth = 5
 
-            shape(
-              [
-                [s, -s * 2],
-                [s, 0],
-                [0, s * 2],
-                [0, 0],
-              ],
-              {
-                closed: true,
-                fill: true,
-                // stroke: true,
-              },
-            )
+            context.font = `${s * 2}px Fira Code`
+            context.textAlign = 'center'
+            context.textBaseline = 'middle'
+
+            context.shadowColor = '#f2c8'
+            // context.shadowBlur = 10
+            context.shadowOffsetX = 0
+            context.shadowOffsetY = s * 0.2
+
+            context.fillText(phrase[i % phrase.length], 0, 0)
+
+            // shape(
+            //   [
+            //     [s, -s * 2],
+            //     [s, 0],
+            //     [0, s * 2],
+            //     [0, 0],
+            //   ],
+            //   {
+            //     closed: true,
+            //     fill: true,
+            //     // stroke: true,
+            //   },
+            // )
           })
         })
       }
