@@ -22,7 +22,8 @@ const params = createParams({
   element: document.getElementById('root')!,
   // dimensions: [600, 600],
   animate: true,
-  background: [0x000000, 1],
+  // background: [0x000000, 1],
+  // background: [0x000000, 1],
 })
 
 const sketch = create3dSketch(
@@ -51,7 +52,7 @@ const sketch = create3dSketch(
       },
     }
 
-    const ambient = useAmbient(0xffffff, 0.2)
+    const ambient = useAmbient(0xff0000, 0.6)
     scene.add(ambient)
 
     const light = useLight(0xffffff, 2, [1, -1, 0])
@@ -60,7 +61,7 @@ const sketch = create3dSketch(
     const data = {
       clicked: false,
       rotation: { x: PI * 0.75, y: 0, z: 0 },
-      xLim: 5,
+      xLim: 7,
       yLim: 5,
       index: 0,
       jndex: 0,
@@ -70,6 +71,10 @@ const sketch = create3dSketch(
         y: 0,
         z: 0,
         dir: 1,
+      },
+      clickSteps: 10,
+      clickstep() {
+        return this.clickSteps
       },
       scaleFactor: 1,
       scale() {
@@ -114,7 +119,7 @@ const sketch = create3dSketch(
 
     const bounds: OrthographicCameraBounds = [-xLim, xLim, -yLim, yLim]
     camera = useOrthographicCamera(bounds)
-    const depth = 10
+    const depth = 20
     camera.position.set(0, depth, 0)
     camera.lookAt(0, 0, 0)
     scene.add(camera)
@@ -125,14 +130,15 @@ const sketch = create3dSketch(
       const h = Math.floor((Rando.normal() * 0.02 + 0.55) * 10) / 10
 
       const cube = useMesh(
-        useBox([1, 1, 1]),
+        useBox([0.4, 1, 1]),
         useStandardMaterial(hsl(h, 1, 0.4)),
       )
 
+      const margin = 1.2
       // this is wrong I think
-      const x = Maff.map(u, bounds[0] + 1, bounds[1] - 1)
+      const x = Maff.map(u, bounds[0] + margin, bounds[1] - margin)
       const y = Maff.map(i, 0, -depth * 10)
-      const z = Maff.map(v, bounds[2] + 1, bounds[3] - 1)
+      const z = Maff.map(v, bounds[2] + margin, bounds[3] - margin)
 
       cube.position.set(x, y, z)
       scene.add(cube)
@@ -156,28 +162,62 @@ const sketch = create3dSketch(
       return cube
     })
 
-    const colors = [0xff69b4, 0x00ffff, 0x9370db] // hot pink, cyan, medium purple
+    const colors = [0xff69b4, 0x00ffff, 0x9b2339, 0x23399b] // all in same color space needs a red
 
-    const phrase = 'you are very distracting'
+    // tools:
+    // bpm handler [x]
+    // handle key events.
+    // space = reset bpm cursor
+
+    // scenes:
+    // blocks shooting into the distance and back.
+    // > shake then warp to bpm ish (staggered to random number of beats)
+
+    // modifiers:
+    // up = increase x&ylim -> regen blocks
+    // down = decrease x&ylim -> shrink blocks
+    // clicky rotation = rotation.x += Math.floor(TAU * Rando.normal() * clickstep) / clickstep
+
+    console.log(scene)
 
     return ({ time, dt }) => {
+      const bpm = 90
+      const beats = time / (60 / bpm)
+      const beat = Math.floor(beats)
+
+      const bgDuration = 4
+
+      // scene.background = colors[(beat / bgDuration) % colors.length]
+      // scene.fog = colors[beat % colors.length]
+
+      renderer.setClearColor(scene.background)
+
       debug.reset()
       debug.update(container.clientWidth, container.clientHeight)
+      debug.update(beat)
+      // console.log(beat)
 
       cubes.forEach((cube, i) => {
         if (!cube) return
 
+        // bring back clicky rotation
         cube.rotation.y =
-          (Math.floor(
-            cube.rand * 2 * time * data.speed +
-              cube.i * 2 +
-              cube.rand * 215 * 5,
-          ) /
-            5) *
-          cube.dir
+          cube.rand * 2 * time * data.speed + cube.i * 2 + cube.rand * 215 * 5
+        // cube.dir
 
         cube.rotation.x = Math.floor(data.rotation.x * 6) / 6
+
+        const cubeDuration = 8
+
+        const cy = ((i + beat) / cubeDuration) % 1
+
+        cube.scale.set(1 - cy, 1 - cy, 1 - cy)
+
         cube.position.set(cube.x, cube.y, cube.z)
+
+        cube.material.color.set(
+          colors[((beat + 1) / cubeDuration) % colors.length],
+        )
 
         const ai = Math.abs(data.index)
         const ii = ai % cubes.length
@@ -193,7 +233,7 @@ const sketch = create3dSketch(
       })
 
       if (mouse.scrollInertia >= 0) {
-        light.color.set(0xffffff)
+        // light.color.set(0xffffff)
         // light.intensity = 2 + mouse.scrollInertia * 0.01
         ambient.intensity = 0 + mouse.scrollInertia * 0.0001
         // box.scale.set(
@@ -202,8 +242,8 @@ const sketch = create3dSketch(
         //   1 + mouse.scrollInertia * 0.002,
         // )
       } else {
-        light.color.set(0xff0000)
-        light.intensity = 4
+        // light.color.set(0xff0000)
+        light.intensity = 10
         // box.scale.y = 1 + mouse.scrollInertia * 0.001
         ambient.intensity = sin(time, 0.1, 0.2, 0.5)
       }
