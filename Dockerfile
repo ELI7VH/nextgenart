@@ -1,8 +1,8 @@
 FROM node:22-alpine
 
-ARG TARGET_DIR=sketchy
 
-ENV TARGET_DIR=${TARGET_DIR}
+# how to load this from env file
+ENV TARGET_DIR=${TARGET_DIR:-sketchy}
 
 WORKDIR /app
 
