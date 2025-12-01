@@ -181,8 +181,6 @@ const sketch = create3dSketch(
     // down = decrease x&ylim -> shrink blocks
     // clicky rotation = rotation.x += Math.floor(TAU * Rando.normal() * clickstep) / clickstep
 
-    console.log(scene)
-
     const load = async () => {
       data.mic = await micIn()
     }
@@ -193,10 +191,11 @@ const sketch = create3dSketch(
       const bpm = 90
       const beats = time / (60 / bpm)
       const beat = Math.floor(beats)
+      const interval = beats % 1
 
-      const bgDuration = 4
+      const bgDuration = 8
 
-      // scene.background = colors[(beat / bgDuration) % colors.length]
+      scene.background = colors[(beat / bgDuration) % colors.length]
       // scene.fog = colors[beat % colors.length]
 
       renderer.setClearColor(scene.background)
@@ -216,7 +215,7 @@ const sketch = create3dSketch(
 
         cube.rotation.x = Math.floor(data.rotation.x * 6) / 6
 
-        const cubeDuration = 8
+        const cubeDuration = 12 // [12, 8, 4] - iterate over time
 
         const cy = ((i + beat) / cubeDuration) % 1
 
@@ -253,9 +252,8 @@ const sketch = create3dSketch(
         light.intensity = 2 + data.micValue * 100
       } else {
         // light.color.set(0xff0000)
-        light.intensity = 10
+        light.intensity = 5 + interval * 2
         // box.scale.y = 1 + mouse.scrollInertia * 0.001
-        ambient.intensity = sin(time, 0.1, 0.2, 0.5)
       }
 
       // box.rotation.y += mouse.scrollInertia * 0.0001
