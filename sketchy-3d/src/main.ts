@@ -18,6 +18,13 @@ import { Maff, Rando } from '@dank-inc/numbaz'
 import { SuperMouse } from '@dank-inc/super-mouse'
 import { Vec3 } from '@dank-inc/sketchy-3d/lib/types/common'
 import { micIn, MicIn } from './lib/micIn'
+import { BeatMapper } from './lib/BeatMapper'
+
+// patterns
+// data -> scene -> entity -> render function
+// action -> handler -> data
+// osc -> handler -> data
+// action -> osc
 
 const params = createParams({
   element: document.getElementById('root')!,
@@ -63,12 +70,18 @@ const sketch = create3dSketch(
       mic: null as MicIn | null,
       micValue: 0,
       clicked: false,
+
       rotation: { x: PI * 0.75, y: 0, z: 0 },
+      colors: [0xff69b4, 0x00ffff, 0x9b2339, 0x23399b] as const,
+      sceneColorIndex: 0,
+      cubeColorIndex: 0,
+      margin: 1.2,
       xLim: 7,
       yLim: 5,
       index: 0,
       jndex: 0,
       speed: 1,
+      beatMapper: new BeatMapper(75),
       scroll: {
         x: 0,
         y: 0,
@@ -91,32 +104,6 @@ const sketch = create3dSketch(
 
     scene.remove(camera)
 
-    const mouse = new SuperMouse({ element: container, scrollScale: 0.001 })
-    mouse.onScroll = (e) => {
-      e.stopPropagation()
-
-      data.scroll.y = e.deltaY
-
-      const dir = e.deltaY > 0 ? 1 : -1
-
-      if (data.scroll.dir !== dir) {
-        data.jndex += 1
-        data.scroll.dir = dir
-      }
-
-      data.index += data.scroll.dir
-    }
-    mouse.onClick = (e) => {
-      e.stopPropagation()
-      // remove context menu
-      e.preventDefault()
-
-      data.clicked = !data.clicked
-      // box.rotation.x += PI * 0.25
-      data.rotation.x += TAU * Rando.normal()
-      data.rotation.z += TAU * Rando.normal()
-    }
-
     const xLim = data.xLim
     const yLim = data.yLim
 
@@ -137,11 +124,9 @@ const sketch = create3dSketch(
         useStandardMaterial(hsl(h, 1, 0.4)),
       )
 
-      const margin = 1.2
-      // this is wrong I think
-      const x = Maff.map(u, bounds[0] + margin, bounds[1] - margin)
+      const x = Maff.map(u, bounds[0] + data.margin, bounds[1] - data.margin)
       const y = Maff.map(i, 0, -depth * 10)
-      const z = Maff.map(v, bounds[2] + margin, bounds[3] - margin)
+      const z = Maff.map(v, bounds[2] + data.margin, bounds[3] - data.margin)
 
       cube.position.set(x, y, z)
       scene.add(cube)
@@ -165,8 +150,6 @@ const sketch = create3dSketch(
       return cube
     })
 
-    const colors = [0xff69b4, 0x00ffff, 0x9b2339, 0x23399b] // all in same color space needs a red
-
     // tools:
     // bpm handler [x]
     // handle key events.
@@ -183,26 +166,72 @@ const sketch = create3dSketch(
 
     const load = async () => {
       data.mic = await micIn()
+
+      data.beatMapper.every(4, (count) => {
+        data.sceneColorIndex = count % data.colors.length
+      })
+
+      data.beatMapper.every(12, (count) => {
+        data.cubeColorIndex = count % data.colors.length
+      })
+
+      data.beatMapper.every(7, (count) => {
+        cubeRoll()
+      })
+
+      console.log(data.beatMapper)
     }
+
+    // eventhandlers
+
+    const cubeRoll = () => {
+      data.rotation.x += TAU * Rando.normal()
+      data.rotation.z += TAU * Rando.normal()
+    }
+
+    // actions
+
+    const mouse = new SuperMouse({ element: container, scrollScale: 0.001 })
+    mouse.onScroll = (e) => {
+      e.stopPropagation()
+
+      data.scroll.y = e.deltaY
+
+      const dir = e.deltaY > 0 ? 1 : -1
+
+      if (data.scroll.dir !== dir) {
+        data.jndex += 1
+        data.scroll.dir = dir
+      }
+
+      data.index += data.scroll.dir
+    }
+    mouse.onClick = (e) => {
+      e.stopPropagation()
+      // remove context menu
+      e.preventDefault()
+
+      data.clicked = !data.clicked
+      data.beatMapper.reset()
+      // box.rotation.x += PI * 0.25
+    }
+
+    // mouse
+    // keyboard
 
     load()
 
     return ({ time, dt }) => {
-      const bpm = 90
-      const beats = time / (60 / bpm)
-      const beat = Math.floor(beats)
-      const interval = beats % 1
+      data.beatMapper.update(dt)
 
-      const bgDuration = 8
-
-      scene.background = colors[(beat / bgDuration) % colors.length]
+      scene.background = data.colors[data.sceneColorIndex]
       // scene.fog = colors[beat % colors.length]
 
       renderer.setClearColor(scene.background)
 
       debug.reset()
       debug.update(container.clientWidth, container.clientHeight)
-      debug.update(beat)
+      debug.update(data.beatMapper.beat)
       // console.log(beat)
 
       cubes.forEach((cube, i) => {
@@ -215,17 +244,13 @@ const sketch = create3dSketch(
 
         cube.rotation.x = Math.floor(data.rotation.x * 6) / 6
 
-        const cubeDuration = 12 // [12, 8, 4] - iterate over time
-
-        const cy = ((i + beat) / cubeDuration) % 1
+        const cy = ((i + data.beatMapper.beat) / 12) % 1
 
         cube.scale.set(1 - cy, 1 - cy, 1 - cy)
 
         cube.position.set(cube.x, cube.y, cube.z)
 
-        cube.material.color.set(
-          colors[((beat + 1) / cubeDuration) % colors.length],
-        )
+        cube.material.color.set(data.colors[data.cubeColorIndex])
 
         const ai = Math.abs(data.index)
         const ii = ai % cubes.length
@@ -235,7 +260,7 @@ const sketch = create3dSketch(
           debug.update(ai, ii, data.jndex)
 
           const palleteIndex =
-            (Math.floor(ai / cubes.length) + data.jndex) % colors.length
+            (Math.floor(ai / cubes.length) + data.jndex) % data.colors.length
           debug.update(palleteIndex)
         }
       })
@@ -252,7 +277,7 @@ const sketch = create3dSketch(
         light.intensity = 2 + data.micValue * 100
       } else {
         // light.color.set(0xff0000)
-        light.intensity = 5 + interval * 2
+        light.intensity = 5 + data.beatMapper.interval * 2
         // box.scale.y = 1 + mouse.scrollInertia * 0.001
       }
 
