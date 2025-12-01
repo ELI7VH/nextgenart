@@ -82,6 +82,7 @@ const sketch = create3dSketch(
       jndex: 0,
       speed: 1,
       beatMapper: new BeatMapper(75),
+      oscServer: null,
       scroll: {
         x: 0,
         y: 0,
@@ -164,24 +165,6 @@ const sketch = create3dSketch(
     // down = decrease x&ylim -> shrink blocks
     // clicky rotation = rotation.x += Math.floor(TAU * Rando.normal() * clickstep) / clickstep
 
-    const load = async () => {
-      data.mic = await micIn()
-
-      data.beatMapper.every(4, (count) => {
-        data.sceneColorIndex = count % data.colors.length
-      })
-
-      data.beatMapper.every(12, (count) => {
-        data.cubeColorIndex = count % data.colors.length
-      })
-
-      data.beatMapper.every(7, (count) => {
-        cubeRoll()
-      })
-
-      console.log(data.beatMapper)
-    }
-
     // eventhandlers
 
     const cubeRoll = () => {
@@ -218,8 +201,35 @@ const sketch = create3dSketch(
 
     // mouse
     // keyboard
+    const init = async () => {
+      data.mic = await micIn()
 
-    load()
+      data.beatMapper.every(4, (count) => {
+        data.sceneColorIndex = count % data.colors.length
+      })
+
+      data.beatMapper.every(12, (count) => {
+        data.cubeColorIndex = count % data.colors.length
+      })
+
+      data.beatMapper.every(7, (count) => {
+        cubeRoll()
+      })
+
+      console.log('osc server', data.oscServer)
+
+      // data.oscServer.on('/songStart', () => {
+      //   data.beatMapper.reset()
+      // })
+
+      // connect ot socket.elijahlucian.ca:2346
+
+      // data.oscServer.on('/bpm', (e: any) => {
+      //   console.log('bpm', e.args[0])
+      // })
+    }
+
+    init()
 
     return ({ time, dt }) => {
       data.beatMapper.update(dt)
