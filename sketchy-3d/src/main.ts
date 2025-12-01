@@ -17,6 +17,7 @@ import { Maff, Rando } from '@dank-inc/numbaz'
 
 import { SuperMouse } from '@dank-inc/super-mouse'
 import { Vec3 } from '@dank-inc/sketchy-3d/lib/types/common'
+import { micIn, MicIn } from './lib/micIn'
 
 const params = createParams({
   element: document.getElementById('root')!,
@@ -59,6 +60,8 @@ const sketch = create3dSketch(
     scene.add(light)
 
     const data = {
+      mic: null as MicIn | null,
+      micValue: 0,
       clicked: false,
       rotation: { x: PI * 0.75, y: 0, z: 0 },
       xLim: 7,
@@ -180,6 +183,12 @@ const sketch = create3dSketch(
 
     console.log(scene)
 
+    const load = async () => {
+      data.mic = await micIn()
+    }
+
+    load()
+
     return ({ time, dt }) => {
       const bpm = 90
       const beats = time / (60 / bpm)
@@ -232,15 +241,16 @@ const sketch = create3dSketch(
         }
       })
 
-      if (mouse.scrollInertia >= 0) {
-        // light.color.set(0xffffff)
-        // light.intensity = 2 + mouse.scrollInertia * 0.01
-        ambient.intensity = 0 + mouse.scrollInertia * 0.0001
-        // box.scale.set(
-        //   1 + mouse.scrollInertia * 0.002,
-        //   1, // + mouse.scrollInertia * 0.001,
-        //   1 + mouse.scrollInertia * 0.002,
-        // )
+      if (data.mic) {
+        const micValue = (data.mic.tdData[0] - 128) / 128
+        if (micValue > data.micValue) {
+          console.log('micValue', micValue)
+          data.micValue = micValue
+        }
+        data.micValue *= 0.98
+
+        data.mic.updateByteTimeDomainData()
+        light.intensity = 2 + data.micValue * 100
       } else {
         // light.color.set(0xff0000)
         light.intensity = 10
