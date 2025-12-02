@@ -87,7 +87,7 @@ const sketch = create3dSketch(
       jndex: 0,
       speed: 1,
       beatmapSpan: Rando.normal() * 30 + 3,
-      beatMapper: new BeatMapper(132),
+      beatMapper: new BeatMapper(121),
       oscServer: null,
       scroll: {
         x: 0,
