@@ -26,6 +26,8 @@ import { BeatMapper } from './lib/BeatMapper'
 // osc -> handler -> data
 // action -> osc
 
+// todo: add movement to fill in space.
+
 const params = createParams({
   element: document.getElementById('root')!,
   // dimensions: [600, 600],
@@ -70,18 +72,21 @@ const sketch = create3dSketch(
       mic: null as MicIn | null,
       micValue: 0,
       clicked: false,
-
-      rotation: { x: PI * 0.75, y: 0, z: 0 },
+      rotation: {
+        x: PI * 0.75,
+        y: 0,
+        z: 0,
+      },
       colors: [0xff69b4, 0x00ffff, 0x9b2339, 0x23399b] as const,
       sceneColorIndex: 0,
       cubeColorIndex: 0,
       margin: 1.2,
       xLim: 7,
-      yLim: 5,
+      yLim: 11,
       index: 0,
       jndex: 0,
       speed: 1,
-      beatMapper: new BeatMapper(75),
+      beatMapper: new BeatMapper(132),
       oscServer: null,
       scroll: {
         x: 0,
@@ -89,6 +94,7 @@ const sketch = create3dSketch(
         z: 0,
         dir: 1,
       },
+      grid: [],
       clickSteps: 10,
       clickstep() {
         return this.clickSteps
@@ -117,9 +123,7 @@ const sketch = create3dSketch(
 
     const cubes = mapXY(xLim, yLim, (u, v) => {
       const i = u + v
-
       const h = Math.floor((Rando.normal() * 0.02 + 0.55) * 10) / 10
-
       const cube = useMesh(
         useBox([0.4, 1, 1]),
         useStandardMaterial(hsl(h, 1, 0.4)),
@@ -135,6 +139,7 @@ const sketch = create3dSketch(
       cube.x = x
       cube.y = y
       cube.z = z
+      cube.offset = { x: 0, y: 0, z: 0 }
       cube.u = u
       cube.v = v
       cube.i = i
