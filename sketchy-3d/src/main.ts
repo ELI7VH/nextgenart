@@ -86,6 +86,7 @@ const sketch = create3dSketch(
       index: 0,
       jndex: 0,
       speed: 1,
+      beatmapSpan: Rando.normal() * 30 + 3,
       beatMapper: new BeatMapper(132),
       oscServer: null,
       scroll: {
@@ -140,6 +141,7 @@ const sketch = create3dSketch(
       cube.y = y
       cube.z = z
       cube.offset = { x: 0, y: 0, z: 0 }
+
       cube.u = u
       cube.v = v
       cube.i = i
@@ -221,6 +223,11 @@ const sketch = create3dSketch(
         cubeRoll()
       })
 
+      data.beatMapper.every(43, (count) => {
+        // todo: recurse and set a beatMapper.on(Rando.normal() * 100) to the same thing every time.
+        data.beatmapSpan = Rando.normal() * 30 + 3
+      })
+
       console.log('osc server', data.oscServer)
 
       // data.oscServer.on('/songStart', () => {
@@ -259,7 +266,7 @@ const sketch = create3dSketch(
 
         cube.rotation.x = Math.floor(data.rotation.x * 6) / 6
 
-        const cy = ((i + data.beatMapper.beat) / 12) % 1
+        const cy = ((i + data.beatMapper.beat) / data.beatmapSpan) % 1
 
         cube.scale.set(1 - cy, 1 - cy, 1 - cy)
 
