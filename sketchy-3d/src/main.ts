@@ -68,6 +68,9 @@ const sketch = create3dSketch(
     const light = useLight(0xffffff, 2, [1, -1, 0])
     scene.add(light)
 
+    const cubeFab = () =>
+      useMesh(useBox([0.4, 1, 1]), useStandardMaterial(hsl(0, 1, 0.4)))
+
     const data = {
       mic: null as MicIn | null,
       micValue: 0,
@@ -95,7 +98,9 @@ const sketch = create3dSketch(
         z: 0,
         dir: 1,
       },
+      depth: 20,
       grid: [],
+      cubes: [] as ReturnType<typeof cubeFab>[],
       clickSteps: 10,
       clickstep() {
         return this.clickSteps
@@ -108,71 +113,70 @@ const sketch = create3dSketch(
           1 * this.scaleFactor,
         ] as Vec3
       },
+      generateCubes() {
+        this.cubes.forEach((cube) => {
+          scene.remove(cube)
+        })
+        this.cubes = []
+
+        this.cubes = mapXY(this.xLim, this.yLim, (u, v) => {
+          const i = u + v
+          const h = Math.floor((Rando.normal() * 0.02 + 0.55) * 10) / 10
+          const cube = cubeFab()
+
+          const x = Maff.map(
+            u,
+            bounds[0] + this.margin,
+            bounds[1] - this.margin,
+          )
+          const y = Maff.map(i, 0, -this.depth * 10)
+          const z = Maff.map(
+            v,
+            bounds[2] + this.margin,
+            bounds[3] - this.margin,
+          )
+
+          cube.position.set(x, y, z)
+          scene.add(cube)
+
+          cube.x = x
+          cube.y = y
+          cube.z = z
+          cube.offset = { x: 0, y: 0, z: 0 }
+
+          cube.u = u
+          cube.v = v
+          cube.i = i
+          cube.bb = 0
+          cube.rand = Rando.normal()
+          cube.dir = Rando.normal() > 0.5 ? 1 : -1
+
+          cube.rotation.x = Rando.normal() * TAU
+          cube.rotation.y = Rando.normal() * TAU
+          cube.rotation.z = Rando.normal() * TAU
+
+          cube.ui = i / (this.xLim * this.yLim)
+
+          return cube
+        })
+      },
+      init() {
+        this.generateCubes()
+      },
     }
 
     scene.remove(camera)
 
-    const xLim = data.xLim
-    const yLim = data.yLim
-
-    const bounds: OrthographicCameraBounds = [-xLim, xLim, -yLim, yLim]
+    const bounds: OrthographicCameraBounds = [
+      -data.xLim,
+      data.xLim,
+      -data.yLim,
+      data.yLim,
+    ]
     camera = useOrthographicCamera(bounds)
-    const depth = 20
-    camera.position.set(0, depth, 0)
+    camera.position.set(0, data.depth, 0)
     camera.lookAt(0, 0, 0)
     scene.add(camera)
-
-    const cubes = mapXY(xLim, yLim, (u, v) => {
-      const i = u + v
-      const h = Math.floor((Rando.normal() * 0.02 + 0.55) * 10) / 10
-      const cube = useMesh(
-        useBox([0.4, 1, 1]),
-        useStandardMaterial(hsl(h, 1, 0.4)),
-      )
-
-      const x = Maff.map(u, bounds[0] + data.margin, bounds[1] - data.margin)
-      const y = Maff.map(i, 0, -depth * 10)
-      const z = Maff.map(v, bounds[2] + data.margin, bounds[3] - data.margin)
-
-      cube.position.set(x, y, z)
-      scene.add(cube)
-
-      cube.x = x
-      cube.y = y
-      cube.z = z
-      cube.offset = { x: 0, y: 0, z: 0 }
-
-      cube.u = u
-      cube.v = v
-      cube.i = i
-      cube.bb = 0
-      cube.rand = Rando.normal()
-      cube.dir = Rando.normal() > 0.5 ? 1 : -1
-
-      cube.rotation.x = Rando.normal() * TAU
-      cube.rotation.y = Rando.normal() * TAU
-      cube.rotation.z = Rando.normal() * TAU
-
-      cube.ui = i / (xLim * yLim)
-
-      return cube
-    })
-
-    // tools:
-    // bpm handler [x]
-    // handle key events.
-    // space = reset bpm cursor
-
-    // scenes:
-    // blocks shooting into the distance and back.
-    // > shake then warp to bpm ish (staggered to random number of beats)
-
-    // modifiers:
-    // up = increase x&ylim -> regen blocks
-    // down = decrease x&ylim -> shrink blocks
-    // clicky rotation = rotation.x += Math.floor(TAU * Rando.normal() * clickstep) / clickstep
-
-    // eventhandlers
 
     const cubeRoll = () => {
       data.rotation.x += TAU * Rando.normal()
@@ -211,11 +215,11 @@ const sketch = create3dSketch(
     const init = async () => {
       data.mic = await micIn()
 
-      data.beatMapper.every(4, (count) => {
+      data.beatMapper.every(5, (count) => {
         data.sceneColorIndex = count % data.colors.length
       })
 
-      data.beatMapper.every(12, (count) => {
+      data.beatMapper.every(11, (count) => {
         data.cubeColorIndex = count % data.colors.length
       })
 
@@ -226,6 +230,30 @@ const sketch = create3dSketch(
       data.beatMapper.every(43, (count) => {
         // todo: recurse and set a beatMapper.on(Rando.normal() * 100) to the same thing every time.
         data.beatmapSpan = Rando.normal() * 30 + 3
+      })
+
+      data.beatMapper.every(13, (count) => {
+        data.cubes.forEach((cube) => {
+          const scale = 0.2
+          cube.offset.x = Rando.normal() * scale
+          cube.offset.y = Rando.normal() * scale
+          cube.offset.z = Rando.normal() * scale
+        })
+      })
+
+      data.beatMapper.every(1, (count) => {
+        data.cubes.forEach((cube) => {
+          const scale = 0.02
+          cube.offset.x += Rando.normal() * Math.abs(cube.rotation.x) * scale
+          cube.offset.y += Rando.normal() * Math.abs(cube.rotation.y) * scale
+          cube.offset.z += Rando.normal() * Math.abs(cube.rotation.z) * scale
+        })
+      })
+
+      data.beatMapper.every(1, (count) => {
+        // data.xLim = Rando.normal() * 10 + 10
+        // data.yLim = Rando.normal() * 10 + 10
+        // data.generateCubes()
       })
 
       console.log('osc server', data.oscServer)
@@ -242,6 +270,7 @@ const sketch = create3dSketch(
     }
 
     init()
+    data.init()
 
     return ({ time, dt }) => {
       data.beatMapper.update(dt)
@@ -256,7 +285,7 @@ const sketch = create3dSketch(
       debug.update(data.beatMapper.beat)
       // console.log(beat)
 
-      cubes.forEach((cube, i) => {
+      data.cubes.forEach((cube, i) => {
         if (!cube) return
 
         // bring back clicky rotation
@@ -270,19 +299,24 @@ const sketch = create3dSketch(
 
         cube.scale.set(1 - cy, 1 - cy, 1 - cy)
 
-        cube.position.set(cube.x, cube.y, cube.z)
+        cube.position.set(
+          cube.x + cube.offset.x,
+          cube.y + cube.offset.y,
+          cube.z + cube.offset.z,
+        )
 
         cube.material.color.set(data.colors[data.cubeColorIndex])
 
         const ai = Math.abs(data.index)
-        const ii = ai % cubes.length
+        const ii = ai % data.cubes.length
 
         if (ii === i) {
           cube.rotation.y += mouse.scrollInertia * 0.05
           debug.update(ai, ii, data.jndex)
 
           const palleteIndex =
-            (Math.floor(ai / cubes.length) + data.jndex) % data.colors.length
+            (Math.floor(ai / data.cubes.length) + data.jndex) %
+            data.colors.length
           debug.update(palleteIndex)
         }
       })
