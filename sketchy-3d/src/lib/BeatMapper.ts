@@ -2,7 +2,8 @@ type Event = {
   beats: number
   callback: (count: number) => void
   triggered: boolean
-  continuous: boolean
+  continuous: boolean //
+  discard?: boolean // if true, the handler will be discarded after it is triggered
   count: number
   u: number
 }

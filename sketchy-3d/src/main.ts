@@ -14,11 +14,31 @@ import {
 import { mapXY } from '@dank-inc/lewps'
 import { hsl } from '@dank-inc/sketchy/lib/helpers/color'
 import { Maff, Rando } from '@dank-inc/numbaz'
-
 import { SuperMouse } from '@dank-inc/super-mouse'
 import { Vec3 } from '@dank-inc/sketchy-3d/lib/types/common'
+
+import io from 'socket.io-client'
+
 import { micIn, MicIn } from './lib/micIn'
 import { BeatMapper } from './lib/BeatMapper'
+
+// Declare dankstore global type
+declare global {
+  interface Window {
+    dankstore: {
+      get(key?: string): any
+      set(key: string, value: any): void
+      register(schema: Record<string, {
+        type: string
+        default: any
+        parse?: (value: string) => any
+        min?: number
+        max?: number
+        options?: string[]
+      }>): void
+    }
+  }
+}
 
 // patterns
 // data -> scene -> entity -> render function
@@ -27,6 +47,10 @@ import { BeatMapper } from './lib/BeatMapper'
 // action -> osc
 
 // todo: add movement to fill in space.
+// todo: fuck with camera bounds, zoom into sections for spans of time and back out.
+
+// todo: export key / button to export settings to a json file.
+// todo: also export option to sharable link with query params.
 
 const params = createParams({
   element: document.getElementById('root')!,
@@ -39,6 +63,18 @@ const params = createParams({
 const sketch = create3dSketch(
   ({ scene, camera, renderer, PI, TAU, container, sin, cos, context }) => {
     // Z is UP
+
+    localStorage.debug = '*'
+    console.log(window.dankstore)
+    // Register dankstore params with types
+    window.dankstore.register({
+      bpm: { type: 'range', min: 60, max: 200, default: 81.44, parse: Number },
+      speed: { type: 'range', min: 0, max: 5, default: 1, parse: Number },
+      xLim: { type: 'range', min: 1, max: 20, default: 7, parse: Number },
+      yLim: { type: 'range', min: 1, max: 20, default: 11, parse: Number },
+      depth: { type: 'range', min: 5, max: 50, default: 20, parse: Number },
+      // Add more params here as needed
+    })
 
     container.addEventListener('contextmenu', (e) => {
       if (!e.ctrlKey) {
@@ -71,6 +107,8 @@ const sketch = create3dSketch(
     const cubeFab = () =>
       useMesh(useBox([0.4, 1, 1]), useStandardMaterial(hsl(0, 1, 0.4)))
 
+    // todo get state from the server.
+
     const data = {
       mic: null as MicIn | null,
       micValue: 0,
@@ -84,21 +122,21 @@ const sketch = create3dSketch(
       sceneColorIndex: 0,
       cubeColorIndex: 0,
       margin: 1.2,
-      xLim: 7,
-      yLim: 11,
+      xLim: window.dankstore.get('xLim'),
+      yLim: window.dankstore.get('yLim'),
       index: 0,
       jndex: 0,
-      speed: 1,
+      speed: window.dankstore.get('speed'),
       beatmapSpan: Rando.normal() * 30 + 3,
-      beatMapper: new BeatMapper(121),
-      oscServer: null,
+      beatMapper: new BeatMapper(window.dankstore.get('bpm')),
+      socket: io('relay.elijahlucian.ca'), // , 'http://localhost:8080'),
       scroll: {
         x: 0,
         y: 0,
         z: 0,
         dir: 1,
       },
-      depth: 20,
+      depth: window.dankstore.get('depth'),
       grid: [],
       cubes: [] as ReturnType<typeof cubeFab>[],
       clickSteps: 10,
@@ -129,7 +167,9 @@ const sketch = create3dSketch(
             bounds[0] + this.margin,
             bounds[1] - this.margin,
           )
-          const y = Maff.map(i, 0, -this.depth * 10)
+
+          const y = Maff.map(i, 0, -this.depth * 2)
+
           const z = Maff.map(
             v,
             bounds[2] + this.margin,
@@ -178,11 +218,6 @@ const sketch = create3dSketch(
     camera.lookAt(0, 0, 0)
     scene.add(camera)
 
-    const cubeRoll = () => {
-      data.rotation.x += TAU * Rando.normal()
-      data.rotation.z += TAU * Rando.normal()
-    }
-
     // actions
 
     const mouse = new SuperMouse({ element: container, scrollScale: 0.001 })
@@ -224,13 +259,21 @@ const sketch = create3dSketch(
       })
 
       data.beatMapper.every(7, (count) => {
-        cubeRoll()
+        data.rotation.x += TAU * Rando.normal()
+        data.rotation.z += TAU * Rando.normal()
       })
 
       data.beatMapper.every(43, (count) => {
         // todo: recurse and set a beatMapper.on(Rando.normal() * 100) to the same thing every time.
-        data.beatmapSpan = Rando.normal() * 30 + 3
+        data.beatmapSpan = Rando.normal() * 2 + 0
       })
+
+      data.beatMapper.every(71, (count) => {
+        // camera bounds child event handler
+        // after handler fires, this handler should resume.
+      })
+
+      // recursive event handler, chnages the length of the beatmapSpa with each iteration.
 
       data.beatMapper.every(13, (count) => {
         data.cubes.forEach((cube) => {
@@ -243,7 +286,7 @@ const sketch = create3dSketch(
 
       data.beatMapper.every(1, (count) => {
         data.cubes.forEach((cube) => {
-          const scale = 0.02
+          const scale = 0.005
           cube.offset.x += Rando.normal() * Math.abs(cube.rotation.x) * scale
           cube.offset.y += Rando.normal() * Math.abs(cube.rotation.y) * scale
           cube.offset.z += Rando.normal() * Math.abs(cube.rotation.z) * scale
@@ -256,7 +299,47 @@ const sketch = create3dSketch(
         // data.generateCubes()
       })
 
-      console.log('osc server', data.oscServer)
+      data.socket.on('osc', (e: any) => {
+        console.log('osc', e.address, e.args)
+
+        switch (e.address) {
+          case '/bpm':
+            const bpm = e.args[0]
+            data.beatMapper.bpm = bpm
+            data.beatMapper.reset()
+            break
+          case '/songStart':
+            data.beatMapper.reset()
+            break
+        }
+      })
+
+      data.socket.on('connect', () => {
+        console.log('connected', data.socket.id, data.socket.connected)
+      })
+
+      data.socket.on('disconnect', () => {
+        console.log('disconnected', data.socket.id, data.socket.connected)
+      })
+
+      data.socket.on('error', (e: any) => {
+        console.log('socket error', e)
+      })
+
+      data.socket.on('data', (e) => {
+        console.log('socket data', e)
+
+        switch (e.address) {
+          case '/bpm':
+            const bpm = e.args[0]
+            data.beatMapper.bpm = bpm
+            data.beatMapper.reset()
+            break
+          case '/songStart':
+            data.beatMapper.reset()
+            break
+        }
+      })
 
       // data.oscServer.on('/songStart', () => {
       //   data.beatMapper.reset()
@@ -278,7 +361,10 @@ const sketch = create3dSketch(
       scene.background = data.colors[data.sceneColorIndex]
       // scene.fog = colors[beat % colors.length]
 
-      renderer.setClearColor(scene.background)
+      // energy level dance
+      // renderer.setClearColor(scene.background)
+      // energy level chill
+      renderer.setClearColor(0x000000)
 
       debug.reset()
       debug.update(container.clientWidth, container.clientHeight)
@@ -323,14 +409,14 @@ const sketch = create3dSketch(
 
       if (data.mic) {
         const micValue = (data.mic.tdData[0] - 128) / 128
+
         if (micValue > data.micValue) {
-          console.log('micValue', micValue)
           data.micValue = micValue
         }
         data.micValue *= 0.98
 
         data.mic.updateByteTimeDomainData()
-        light.intensity = 2 + data.micValue * 100
+        light.intensity = 2 + data.micValue * 20
       } else {
         // light.color.set(0xff0000)
         light.intensity = 5 + data.beatMapper.interval * 2

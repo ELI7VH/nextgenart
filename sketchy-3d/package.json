@@ -16,6 +16,7 @@
     "@dank-inc/lewps": "^1.0.0",
     "@dank-inc/numbaz": "^0.6.1",
     "@dank-inc/sketchy-3d": "^0.999.0",
-    "@dank-inc/super-mouse": "^0.10.2"
+    "@dank-inc/super-mouse": "^0.10.2",
+    "socket.io-client": "^4.8.1"
   }
 }
