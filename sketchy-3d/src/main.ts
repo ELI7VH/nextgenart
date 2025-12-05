@@ -52,6 +52,32 @@ declare global {
 // todo: export key / button to export settings to a json file.
 // todo: also export option to sharable link with query params.
 
+// Wait for dankstore to be ready
+const waitForDankstore = (): Promise<void> => {
+  return new Promise((resolve) => {
+    if (window.dankstore) {
+      resolve()
+    } else {
+      const checkInterval = setInterval(() => {
+        if (window.dankstore) {
+          clearInterval(checkInterval)
+          resolve()
+        }
+      }, 10)
+    }
+  })
+}
+
+// Initialize dankstore settings
+await waitForDankstore()
+window.dankstore.register({
+  bpm: { type: 'range', min: 60, max: 200, default: 81.44, parse: Number },
+  speed: { type: 'range', min: 0, max: 5, default: 1, parse: Number },
+  xLim: { type: 'range', min: 1, max: 20, default: 7, parse: Number },
+  yLim: { type: 'range', min: 1, max: 20, default: 11, parse: Number },
+  depth: { type: 'range', min: 5, max: 50, default: 20, parse: Number },
+})
+
 const params = createParams({
   element: document.getElementById('root')!,
   // dimensions: [600, 600],
@@ -65,16 +91,6 @@ const sketch = create3dSketch(
     // Z is UP
 
     localStorage.debug = '*'
-    console.log(window.dankstore)
-    // Register dankstore params with types
-    window.dankstore.register({
-      bpm: { type: 'range', min: 60, max: 200, default: 81.44, parse: Number },
-      speed: { type: 'range', min: 0, max: 5, default: 1, parse: Number },
-      xLim: { type: 'range', min: 1, max: 20, default: 7, parse: Number },
-      yLim: { type: 'range', min: 1, max: 20, default: 11, parse: Number },
-      depth: { type: 'range', min: 5, max: 50, default: 20, parse: Number },
-      // Add more params here as needed
-    })
 
     container.addEventListener('contextmenu', (e) => {
       if (!e.ctrlKey) {
