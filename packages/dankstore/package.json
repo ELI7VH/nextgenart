@@ -1,0 +1,26 @@
+{
+  "name": "@dank-inc/dankstore",
+  "version": "1.0.0",
+  "description": "Browser customization overlay with URL params, localStorage, and real-time sync",
+  "main": "dankstore.js",
+  "unpkg": "dankstore.js",
+  "jsdelivr": "dankstore.js",
+  "scripts": {
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "settings",
+    "customization",
+    "url-params",
+    "localstorage",
+    "configuration",
+    "browser"
+  ],
+  "author": "Elijah Lucian",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elijahlucian/nextgenart.git",
+    "directory": "packages/dankstore"
+  }
+}
