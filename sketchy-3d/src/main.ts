@@ -454,8 +454,9 @@ const waitForDankstore = (): Promise<void> => {
       // light.lookAt(box.position)
       mouse.update()
       renderer.render(scene, camera)
-    },
-  )
+    }
+  },
+)
 
   start3dSketch(sketch, params)
 })()
