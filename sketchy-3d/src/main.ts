@@ -28,14 +28,19 @@ declare global {
     dankstore: {
       get(key?: string): any
       set(key: string, value: any): void
-      register(schema: Record<string, {
-        type: string
-        default: any
-        parse?: (value: string) => any
-        min?: number
-        max?: number
-        options?: string[]
-      }>): void
+      register(
+        schema: Record<
+          string,
+          {
+            type: string
+            default: any
+            parse?: (value: string) => any
+            min?: number
+            max?: number
+            options?: string[]
+          }
+        >,
+      ): void
     }
   }
 }
@@ -51,6 +56,8 @@ declare global {
 
 // todo: export key / button to export settings to a json file.
 // todo: also export option to sharable link with query params.
+
+// todo: add scale & number of things functionlaity, smaller things, more of them.
 
 // Wait for dankstore to be ready
 const waitForDankstore = (): Promise<void> => {
