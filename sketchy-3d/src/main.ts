@@ -75,29 +75,31 @@ const waitForDankstore = (): Promise<void> => {
   })
 }
 
-// Initialize dankstore settings
-await waitForDankstore()
-window.dankstore.register({
-  bpm: { type: 'range', min: 60, max: 200, default: 81.44, parse: Number },
-  speed: { type: 'range', min: 0, max: 5, default: 1, parse: Number },
-  xLim: { type: 'range', min: 1, max: 20, default: 7, parse: Number },
-  yLim: { type: 'range', min: 1, max: 20, default: 11, parse: Number },
-  depth: { type: 'range', min: 5, max: 50, default: 20, parse: Number },
-})
+// Initialize everything after dankstore is ready
+;(async () => {
+  await waitForDankstore()
 
-const params = createParams({
-  element: document.getElementById('root')!,
-  // dimensions: [600, 600],
-  animate: true,
-  // background: [0x000000, 1],
-  // background: [0x000000, 1],
-})
+  window.dankstore.register({
+    bpm: { type: 'range', min: 60, max: 200, default: 81.44, parse: Number },
+    speed: { type: 'range', min: 0, max: 5, default: 1, parse: Number },
+    xLim: { type: 'range', min: 1, max: 20, default: 7, parse: Number },
+    yLim: { type: 'range', min: 1, max: 20, default: 11, parse: Number },
+    depth: { type: 'range', min: 5, max: 50, default: 20, parse: Number },
+  })
 
-const sketch = create3dSketch(
-  ({ scene, camera, renderer, PI, TAU, container, sin, cos, context }) => {
-    // Z is UP
+  const params = createParams({
+    element: document.getElementById('root')!,
+    // dimensions: [600, 600],
+    animate: true,
+    // background: [0x000000, 1],
+    // background: [0x000000, 1],
+  })
 
-    localStorage.debug = '*'
+  const sketch = create3dSketch(
+    ({ scene, camera, renderer, PI, TAU, container, sin, cos, context }) => {
+      // Z is UP
+
+      localStorage.debug = '*'
 
     container.addEventListener('contextmenu', (e) => {
       if (!e.ctrlKey) {
@@ -452,8 +454,8 @@ const sketch = create3dSketch(
       // light.lookAt(box.position)
       mouse.update()
       renderer.render(scene, camera)
-    }
-  },
-)
+        },
+  )
 
-start3dSketch(sketch, params)
+  start3dSketch(sketch, params)
+})()
