@@ -160,7 +160,9 @@ const waitForDankstore = (): Promise<void> => {
         speed: window.dankstore.get('speed'),
         beatmapSpan: Rando.normal() * 30 + 3,
         beatMapper: new BeatMapper(window.dankstore.get('bpm')),
-        socket: io('relay.elijahlucian.ca'), // , 'http://localhost:8080'),
+        socket: io(
+          import.meta.env.VITE_SOCKET_URL || 'https://relay.elijahlucian.ca',
+        ),
         scroll: {
           x: 0,
           y: 0,
