@@ -9,9 +9,9 @@ The OSC integration follows this data flow:
 ```
 OSC Message (UDP)
   ↓
-Server (Node.js OSC Server - port 57121)
+Relay Service (Go - port 57121)
   ↓
-Socket.IO Broadcast (relay.elijahlucian.ca)
+WebSocket Broadcast (wss://relay.elijahlucian.ca/ws)
   ↓
 Sketch WebSocket Client (sketchy-3d/src/main.ts)
   ↓
@@ -24,54 +24,45 @@ localStorage + URL Search Params Update
 
 ## Components
 
-### 1. Server-Side OSC Server
+### 1. Relay Service OSC Server
 
-**Location**: `/server/src/services/osc.ts` and `/server/src/index.ts`
+**Location**: `/relay/main.go` and `/relay/osc/`
 
-The server listens for OSC messages on UDP port 57121 and broadcasts them to all connected WebSocket clients via Socket.IO.
+The relay service listens for OSC messages on UDP port 57121 and broadcasts them to all connected WebSocket clients.
 
-**Key Code** (server/src/index.ts, lines 92-120):
-```typescript
-const oscServer = new OscServer({
-  port: oscPort,
-  onMessage: (msg, rinfo) => {
-    const [address, ...args] = msg
+**Key Features**:
+- Receives OSC messages over UDP (port 57121)
+- Broadcasts to WebSocket clients at `/ws` endpoint
+- Written in Go for high performance
+- Handles multiple simultaneous connections
 
-    let response = {
-      address,
-      args,
-    }
+**Connection URL**:
+- Development: `ws://localhost:8080/ws`
+- Production: `wss://relay.elijahlucian.ca/ws`
 
-    // Special handling for Ableton BPM
-    if (msg[0] === "/ableton/bpm") {
-      const value = args[0] as number
-      response.address = "/bpm"
-      const range = [20, 999]
-      const bpm = Math.round(value * (range[1] - range[0]) + range[0])
-      response.args = [bpm]
-    }
-
-    // Broadcast to all Socket.IO clients
-    socketIoServer.emit("osc", response)
-    oscWebSocketServer.broadcast(response)
-  },
-})
-```
-
-### 2. Client-Side Socket.IO Connection
+### 2. Client-Side WebSocket Connection
 
 **Location**: `/references/nextgenart/sketchy-3d/src/main.ts`
 
-The sketch connects to the Socket.IO server and listens for OSC messages.
+The sketch connects to the relay service using a custom WebSocket client (RelaySocket).
 
-**Connection** (main.ts, line 157):
+**Connection** (main.ts):
 ```typescript
-socket: io('relay.elijahlucian.ca')
+socket: new RelaySocket(
+  import.meta.env.VITE_SOCKET_URL || 'https://relay.elijahlucian.ca',
+)
 ```
+
+**RelaySocket Features** (src/lib/RelaySocket.ts):
+- Automatic protocol conversion (http → ws, https → wss)
+- Automatic `/ws` path appending
+- Reconnection logic with 3-second retry interval
+- Socket.IO-like event interface for compatibility
+- Connection state tracking (connected, id)
 
 ### 3. OSC Message Handler
 
-**Location**: `/references/nextgenart/sketchy-3d/src/main.ts` (lines 327-430)
+**Location**: `/references/nextgenart/sketchy-3d/src/main.ts` (lines 335-372)
 
 The handler processes incoming OSC messages and updates dankstore accordingly.
 
@@ -81,6 +72,7 @@ The following OSC addresses have specific behavior:
 
 - **`/bpm`**: Updates BPM, resets beat mapper, saves to dankstore
 - **`/songStart`**: Resets beat mapper (no dankstore update)
+- **`/cursor`**: Updates song cursor position
 - **`/speed`**: Updates animation speed, saves to dankstore
 - **`/xLim`**: Updates X grid limit, regenerates cubes, saves to dankstore
 - **`/yLim`**: Updates Y grid limit, regenerates cubes, saves to dankstore
@@ -137,12 +129,14 @@ updateURL() {
 
 ## OSC Message Format
 
-OSC messages should follow this structure:
+OSC messages from the relay service arrive as JSON over WebSocket:
 
-```
+```json
 {
-  address: string,  // e.g., "/bpm", "/param/speed", "/xLim"
-  args: any[]       // e.g., [128], [2.5], [10]
+  "type": "osc",
+  "address": "/bpm",
+  "args": [128],
+  "timestamp": 1234567890
 }
 ```
 
@@ -188,15 +182,21 @@ window.dankstore.register({
 
 ## Testing
 
-A test script is provided at `/references/nextgenart/sketchy-3d/test-osc.js`.
+Test scripts are provided at `/references/nextgenart/sketchy-3d/test-osc.js` and `/relay/test-osc.go`.
 
-**Usage**:
+**Usage (JavaScript)**:
 ```bash
 # Test against localhost
 node test-osc.js
 
 # Test against remote server
 node test-osc.js relay.elijahlucian.ca
+```
+
+**Usage (Go)**:
+```bash
+cd /relay
+go run test-osc.go localhost 57121
 ```
 
 The test script sends a sequence of OSC messages to verify the integration:
@@ -241,17 +241,23 @@ https://nextgenart.elijahlucian.ca/?bpm=140&speed=2.5&xLim=10&yLim=15&depth=25
 
 ### OSC messages not reaching the sketch
 
-1. Check Socket.IO connection:
+1. Check WebSocket connection:
    ```javascript
    data.socket.on('connect', () => {
      console.log('connected', data.socket.id, data.socket.connected)
    })
    ```
 
-2. Verify server is receiving OSC:
-   - Server logs should show: `OSC From: { address: '...', ... }`
+2. Verify relay service is receiving OSC:
+   - Relay logs should show: `Received OSC message: /bpm [128]`
 
 3. Check network connectivity to relay.elijahlucian.ca
+
+4. Verify WebSocket endpoint is correct:
+   - Development: `ws://localhost:8080/ws`
+   - Production: `wss://relay.elijahlucian.ca/ws`
+
+5. Check for CORS issues in browser console
 
 ### URL not updating
 
@@ -271,6 +277,35 @@ https://nextgenart.elijahlucian.ca/?bpm=140&speed=2.5&xLim=10&yLim=15&depth=25
    ```javascript
    localStorage.removeItem('dankstore_settings')
    ```
+
+### WebSocket connection failing
+
+1. Check if relay service is running:
+   ```bash
+   docker compose ps relay
+   ```
+
+2. Test WebSocket endpoint directly:
+   ```javascript
+   const ws = new WebSocket('wss://relay.elijahlucian.ca/ws')
+   ws.onopen = () => console.log('Connected!')
+   ws.onerror = (e) => console.error('Error:', e)
+   ```
+
+3. Check firewall/network settings for WebSocket support
+
+## Direct Relay Connection
+
+The sketchy-3d project connects **directly to the relay service**, not through the main server. This provides:
+
+- **Lower latency**: Direct connection reduces message routing delays
+- **Better scalability**: Relay service handles WebSocket connections independently
+- **Separation of concerns**: Main server handles API, relay handles real-time OSC
+- **Simplified architecture**: No intermediary routing needed
+
+The relay service endpoint is:
+- Development: `http://localhost:8080` (auto-converts to `ws://localhost:8080/ws`)
+- Production: `https://relay.elijahlucian.ca` (auto-converts to `wss://relay.elijahlucian.ca/ws`)
 
 ## Future Enhancements
 

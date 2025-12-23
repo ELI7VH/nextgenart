@@ -17,10 +17,9 @@ import { Maff, Rando } from '@dank-inc/numbaz'
 import { SuperMouse } from '@dank-inc/super-mouse'
 import { Vec3 } from '@dank-inc/sketchy-3d/lib/types/common'
 
-import io from 'socket.io-client'
-
 import { micIn, MicIn } from './lib/micIn'
 import { BeatMapper } from './lib/BeatMapper'
+import { RelaySocket } from './lib/RelaySocket'
 
 // Declare dankstore global type
 declare global {
@@ -80,7 +79,7 @@ const waitForDankstore = (): Promise<void> => {
   await waitForDankstore()
 
   window.dankstore.register({
-    bpm: { type: 'range', min: 60, max: 200, default: 81.44, parse: Number },
+    bpm: { type: 'range', min: 30, max: 200, default: 81.44, parse: Number },
     speed: { type: 'range', min: 0, max: 5, default: 1, parse: Number },
     xLim: { type: 'range', min: 1, max: 20, default: 7, parse: Number },
     yLim: { type: 'range', min: 1, max: 20, default: 11, parse: Number },
@@ -155,12 +154,17 @@ const waitForDankstore = (): Promise<void> => {
         },
         xLim: window.dankstore.get('xLim'),
         yLim: window.dankstore.get('yLim'),
+        fft: {
+          low: 0.5,
+          mid: 0.5,
+          high: 0.2,
+        },
         index: 0,
         jndex: 0,
         speed: window.dankstore.get('speed'),
         beatmapSpan: Rando.normal() * 30 + 3,
         beatMapper: new BeatMapper(window.dankstore.get('bpm')),
-        socket: io(
+        socket: new RelaySocket(
           import.meta.env.VITE_SOCKET_URL || 'https://relay.elijahlucian.ca',
         ),
         scroll: {
@@ -333,7 +337,7 @@ const waitForDankstore = (): Promise<void> => {
         })
 
         data.socket.on('osc', (e: any) => {
-          console.log('OSC received:', e.address, e.args)
+          // console.log('OSC received:', e.address, e.args)
 
           // Handle specific OSC addresses with custom behavior
           switch (e.address) {
@@ -346,6 +350,13 @@ const waitForDankstore = (): Promise<void> => {
               break
             case '/cursor':
               data.cursor.song = e.args[0]
+              break
+            case '/fft3':
+              const [low, mid, high] = e.args
+              data.fft.low = low
+              data.fft.mid = mid
+              data.fft.high = high
+              // console.log('OSC received:', low, mid, high)
               break
             case '/songStart':
               data.beatMapper.reset()
@@ -383,7 +394,10 @@ const waitForDankstore = (): Promise<void> => {
         // energy level dance
         // renderer.setClearColor(scene.background)
         // energy level chill
-        renderer.setClearColor(0x000000)
+
+        // what it's doing for low, but then white reponse for high
+        const high = Math.floor(data.fft.high * 250).toString(16)
+        renderer.setClearColor(`#${high}${high}${high}`)
 
         debug.reset()
         debug.update(container.clientWidth, container.clientHeight)
@@ -403,6 +417,7 @@ const waitForDankstore = (): Promise<void> => {
           const cy = ((i + data.beatMapper.beat) / data.beatmapSpan) % 1
 
           cube.scale.set(1 - cy, 1 - cy, 1 - cy)
+          cube.scale.multiplyScalar((data.fft.low > 0 ? data.fft.low : 0) * 3)
 
           cube.position.set(
             cube.x + cube.offset.x,
