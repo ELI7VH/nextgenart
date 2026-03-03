@@ -27,11 +27,11 @@ interface Config {
 }
 
 const defaults: Config = {
-  nParticles: 3000,
-  speed: 2.2,
-  decayAlpha: 10,
+  nParticles: 9000,
+  speed: 1.8,
+  decayAlpha: 3,
   imageAlpha: 0.10,
-  particleAlpha: 6,
+  particleAlpha: 3,
 }
 
 // ─── state ───────────────────────────────────────────────────────────────────
@@ -148,8 +148,8 @@ const tick = () => {
     const f = field[col]?.[row]
     if (!f) continue
 
-    p.vx = p.vx * 0.94 + f.x * 0.25
-    p.vy = p.vy * 0.94 + f.y * 0.25
+    p.vx = p.vx * 0.97 + f.x * 0.15
+    p.vy = p.vy * 0.97 + f.y * 0.15
 
     const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy)
     if (spd > cfg.speed) { p.vx = (p.vx / spd) * cfg.speed; p.vy = (p.vy / spd) * cfg.speed }
@@ -166,7 +166,7 @@ const tick = () => {
     ctx.moveTo(p.px, p.py)
     ctx.lineTo(p.x, p.y)
     ctx.strokeStyle = usingImage ? particleColor(p.x, p.y) : `rgba(200, 218, 255, ${cfg.particleAlpha / 255})`
-    ctx.lineWidth = 0.8
+    ctx.lineWidth = 1.4
     ctx.stroke()
   }
 
@@ -211,11 +211,11 @@ const init = async () => {
   })
 
   window.dankstore.register({
-    particles:    { type: 'range', min: 500,  max: 6000, default: cfg.nParticles,    parse: Number },
-    speed:        { type: 'range', min: 0.5,  max: 6,    default: cfg.speed,         parse: Number },
-    decay:        { type: 'range', min: 1,    max: 60,   default: cfg.decayAlpha,    parse: Number },
-    imageOpacity: { type: 'range', min: 0,    max: 30,   default: cfg.imageAlpha * 100, parse: Number },
-    alpha:        { type: 'range', min: 1,    max: 40,   default: cfg.particleAlpha, parse: Number },
+    particles:    { type: 'range', min: 500,  max: 15000, default: cfg.nParticles,    parse: Number },
+    speed:        { type: 'range', min: 0.5,  max: 6,     default: cfg.speed,         parse: Number },
+    decay:        { type: 'range', min: 1,    max: 60,    default: cfg.decayAlpha,    parse: Number },
+    imageOpacity: { type: 'range', min: 0,    max: 30,    default: cfg.imageAlpha * 100, parse: Number },
+    alpha:        { type: 'range', min: 1,    max: 40,    default: cfg.particleAlpha, parse: Number },
   })
 
   window.addEventListener('resize', resize)
